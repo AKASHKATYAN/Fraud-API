@@ -8,6 +8,15 @@ from io import StringIO
 # Initialize FastAPI
 # ---------------------------
 app = FastAPI(title="AI Fraud Detection API")
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # For hackathon; restrict to your domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------
 # Load Model & Scaler
