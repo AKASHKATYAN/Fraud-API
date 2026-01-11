@@ -4,3 +4,5 @@ numpy
 scikit-learn
 uvicorn
 python-multipart 
+pickle
+io
