@@ -1,35 +1,35 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 import numpy as np
 import pickle
 from io import StringIO
 
-# ---------------------------
 # Initialize FastAPI
-# ---------------------------
+
 app = FastAPI(title="AI Fraud Detection API")
-from fastapi.middleware.cors import CORSMiddleware
+
+# Enable CORS (for frontend access)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For hackathon; restrict to your domain in production
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ---------------------------
+
 # Load Model & Scaler
-# ---------------------------
+
 with open("fraud_model.pkl", "rb") as f:
     model = pickle.load(f)
 
 with open("scaler.pkl", "rb") as f:
     scaler = pickle.load(f)
 
-# ---------------------------
 # Feature Engineering
-# ---------------------------
+
 def preprocess(df):
     df["transaction_time"] = pd.to_datetime(df["transaction_time"])
     df["hour"] = df["transaction_time"].dt.hour
@@ -55,9 +55,9 @@ def preprocess(df):
     X = df[features].replace([np.inf, -np.inf], 0).fillna(0)
     return X, scaler.transform(X)
 
-# ---------------------------
+
 # Explainable AI
-# ---------------------------
+
 def explain(row):
     reasons = []
     if row["amount_zscore_dept"] > 3:
@@ -72,9 +72,8 @@ def explain(row):
         reasons.append("High frequency vendor")
     return ", ".join(reasons) if reasons else "Normal pattern"
 
-# ---------------------------
-# API Endpoint
-# ---------------------------
+# Main /predict endpoint
+
 @app.post("/predict")
 async def predict_fraud(file: UploadFile = File(...)):
     contents = await file.read()
@@ -86,7 +85,7 @@ async def predict_fraud(file: UploadFile = File(...)):
         if col not in df.columns:
             return {"error": f"Missing column: {col}"}
 
-    # Preprocess
+    # Preprocess features
     X_raw, X_scaled = preprocess(df)
 
     # Model prediction
@@ -127,10 +126,17 @@ async def predict_fraud(file: UploadFile = File(...)):
         ]].to_dict(orient="records")
     }
 
-# ---------------------------
-# Optional: Health check
-# ---------------------------
+# Alias /analyze endpoint (calls /predict)
+
+@app.post("/analyze")
+async def analyze_alias(file: UploadFile = File(...)):
+    return await predict_fraud(file)
+
+
+# Health check endpoint
+
 @app.get("/")
 def home():
     return {"status": "AI Fraud Detection API is running"}
+
 
